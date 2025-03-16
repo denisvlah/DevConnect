@@ -162,7 +162,6 @@
             "description": "Successful Response"
           }
         }
-
       },
       "patch": {
         "tags": [
@@ -202,7 +201,6 @@
             }
           }
         }
-
       }
     },
     "/account/upload_image": {
@@ -424,7 +422,6 @@
         ],
         "summary": "Subscribe",
         "operationId": "subscribe_account_subscribe__account_id__post",
-
         "parameters": [
           {
             "name": "account_id",
@@ -503,7 +500,6 @@
         ],
         "summary": "Get Subscriptions",
         "operationId": "get_subscriptions_account_subscriptions__get",
-
         "parameters": [
           {
             "name": "stack",
@@ -714,7 +710,6 @@
         ],
         "summary": "Create Personal Chat",
         "operationId": "create_personal_chat_chat__user_id__post",
-
         "parameters": [
           {
             "name": "user_id",
@@ -757,7 +752,6 @@
         ],
         "summary": "Read Personal Chat",
         "operationId": "read_personal_chat_chat__chat_id__get",
-
         "parameters": [
           {
             "name": "chat_id",
@@ -816,7 +810,6 @@
             }
           }
         }
-
       }
     },
     "/message/send/{chat_id}": {
@@ -877,7 +870,6 @@
         ],
         "summary": "Get My Message",
         "operationId": "get_my_message_message__message_id__get",
-
         "parameters": [
           {
             "name": "message_id",
@@ -1034,7 +1026,6 @@
             }
           }
         }
-
       }
     },
     "/comment/{comment_id}": {
@@ -1044,7 +1035,6 @@
         ],
         "summary": "Get Comment",
         "operationId": "get_comment_comment__comment_id__get",
-
         "parameters": [
           {
             "name": "comment_id",
@@ -1168,7 +1158,6 @@
         ],
         "summary": "Get Posts",
         "operationId": "get_posts_post__get",
-
         "parameters": [
           {
             "name": "user_id",
@@ -1213,7 +1202,6 @@
         ],
         "summary": "Create Post",
         "operationId": "create_post_post__post",
-
         "requestBody": {
           "required": true,
           "content": {
@@ -1280,7 +1268,6 @@
         ],
         "summary": "Get Post",
         "operationId": "get_post_post__post_id__get",
-
         "parameters": [
           {
             "name": "post_id",
@@ -1321,7 +1308,6 @@
         ],
         "summary": "Update Post",
         "operationId": "update_post_post__post_id__patch",
-
         "parameters": [
           {
             "name": "post_id",
@@ -1407,7 +1393,6 @@
         ],
         "summary": "Load Image",
         "operationId": "load_image_post_upload_image__post_id__post",
-
         "parameters": [
           {
             "name": "post_id",
@@ -1460,7 +1445,6 @@
         ],
         "summary": "Delete Image",
         "operationId": "delete_image_post_delete_image__post_id__delete",
-
         "parameters": [
           {
             "name": "post_id",
@@ -1512,7 +1496,6 @@
         ],
         "summary": "Create Like",
         "operationId": "create_like_post_like__post_id__post",
-
         "parameters": [
           {
             "name": "post_id",

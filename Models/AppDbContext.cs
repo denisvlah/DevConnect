@@ -3,10 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevConnect.Models;
 
-public class AppDbContext: IdentityDbContext<User>
+public class AppDbContext : IdentityDbContext<User>
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options): base(options)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        
     }
 }
