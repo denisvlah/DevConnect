@@ -4,7 +4,7 @@ namespace DevConnect.Services;
 
 #pragma warning disable 108, 114, 472, 612, 649, 1573, 1591, 8073, 3016, 8603, 8604, 8625, 8765
 [GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-public interface DevConnectService
+public interface IDevConnectService
 {
     /// <summary>
     ///     Login For Access Token

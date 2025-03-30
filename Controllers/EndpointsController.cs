@@ -12,10 +12,10 @@ namespace DevConnect.Controllers;
 [Authorize]
 public class EndpointsController : Controller
 {
-    private readonly DevConnectService _implementation;
+    private readonly IDevConnectService _implementation;
     private readonly UserManager<User> _userManager;
 
-    public EndpointsController(DevConnectService implementation, UserManager<User> userManager)
+    public EndpointsController(IDevConnectService implementation, UserManager<User> userManager)
     {
         _implementation = implementation;
         _userManager = userManager;

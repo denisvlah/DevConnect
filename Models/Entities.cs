@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DevConnect.Models;
 
 [Index(nameof(Username), IsUnique = true)]
+[Index(nameof(IdentityId), IsUnique = true)]
 public class Profile
 {
     [Key] public int Id { get; set; }
@@ -21,8 +22,8 @@ public class Profile
 
     [StringLength(100)] public string Email { get; set; }
 
-    // Skills as comma-separated string (could be expanded to a separate entity if needed)
-    [StringLength(500)] public string Skills { get; set; }
+    // Skills as a separate entity
+    public virtual ICollection<ProfileSkill> ProfileSkills { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
@@ -49,6 +50,63 @@ public class Profile
             LastName = split[1];
         }
     }
+
+    public string City { get; set; }
+    
+    public string IdentityId { get; set; }
+}
+
+[Index(nameof(Name), IsUnique = true)]
+public class Skill
+{
+    [Key]
+    public int Id { get; set; }
+        
+    [Required]
+    [StringLength(50)]
+    public string Name { get; set; }
+        
+    [StringLength(500)]
+    public string Description { get; set; }
+        
+    // Optional category field for filtering/grouping
+    [StringLength(50)]
+    public string Category { get; set; }
+        
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+    // Navigation property
+    public virtual ICollection<ProfileSkill> ProfileSkills { get; set; }
+}
+    
+// Join entity between Profile and Skill with additional properties
+[Index(nameof(ProfileId))]
+[Index(nameof(SkillId))]
+[Index(nameof(ProfileId), nameof(SkillId), IsUnique = true)]
+public class ProfileSkill
+{
+    [Key]
+    public int Id { get; set; }
+        
+    [Required]
+    public int ProfileId { get; set; }
+        
+    [Required]
+    public int SkillId { get; set; }
+        
+    // Optional years of experience
+    public decimal? YearsOfExperience { get; set; }
+    
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+    // Navigation properties
+    [ForeignKey("ProfileId")]
+    public virtual Profile Profile { get; set; }
+        
+    [ForeignKey("SkillId")]
+    public virtual Skill Skill { get; set; }
 }
 
 [Index(nameof(ProfileId), nameof(CreatedAt))]
@@ -140,12 +198,17 @@ public class DevConnectDbContext : DbContext
         : base(options)
     {
     }
+    
+    
 
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<Post> Posts { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<Like> Likes { get; set; }
+    
+    public DbSet<ProfileSkill> ProfileSkills { get; set; }
+    public DbSet<Skill> Skills { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -195,5 +258,26 @@ public class DevConnectDbContext : DbContext
         modelBuilder.Entity<Like>()
             .HasIndex(l => new {l.PostId, l.ProfileId})
             .IsUnique();
+        
+        // Ensure ProfileSkill combination is unique
+        modelBuilder.Entity<ProfileSkill>()
+            .HasIndex(ps => new { ps.ProfileId, ps.SkillId })
+            .IsUnique();
+        
+        modelBuilder.Entity<Skill>()
+            .HasIndex(s => s.Name)
+            .IsUnique();
+        
+        modelBuilder.Entity<ProfileSkill>()
+            .HasOne(ps => ps.Profile)
+            .WithMany(p => p.ProfileSkills)
+            .HasForeignKey(ps => ps.ProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+                
+        modelBuilder.Entity<ProfileSkill>()
+            .HasOne(ps => ps.Skill)
+            .WithMany(s => s.ProfileSkills)
+            .HasForeignKey(ps => ps.SkillId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
