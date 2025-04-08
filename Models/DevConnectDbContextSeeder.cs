@@ -36,7 +36,7 @@ public static class DevConnectDbContextSeeder
                     "Full-stack developer specialized in React and .NET Core. Passionate about clean code and performance optimization.",
                 AvatarUrl = "https://randomuser.me/api/portraits/women/44.jpg",
                 Email = "sarah.j@example.com",
-                ProfileSkills = MakerandomSkills(skills),
+                ProfileSkills = MakerandomSkills(skills, "c#, angular, css, typescript, rxJs"),
                 CreatedAt = DateTime.UtcNow.AddMonths(-8),
                 UpdatedAt = DateTime.UtcNow.AddMonths(-8)
             },
@@ -48,7 +48,7 @@ public static class DevConnectDbContextSeeder
                     "Backend engineer with focus on distributed systems and microservices architecture. Open source contributor.",
                 AvatarUrl = "https://randomuser.me/api/portraits/men/32.jpg",
                 Email = "mike.chen@example.com",
-                ProfileSkills = MakerandomSkills(skills),
+                ProfileSkills = MakerandomSkills(skills, "C#, asp.net, azure, teraform"),
                 CreatedAt = DateTime.UtcNow.AddMonths(-7),
                 UpdatedAt = DateTime.UtcNow.AddMonths(-7)
             },
@@ -60,7 +60,7 @@ public static class DevConnectDbContextSeeder
                     "Frontend developer and UI/UX enthusiast. Building accessible and beautiful web experiences.",
                 AvatarUrl = "https://randomuser.me/api/portraits/men/67.jpg",
                 Email = "alex.r@example.com",
-                ProfileSkills = MakerandomSkills(skills),
+                ProfileSkills = MakerandomSkills(skills, "html, css, tailwindcss, jquery, bootstrap"),
                 CreatedAt = DateTime.UtcNow.AddMonths(-6),
                 UpdatedAt = DateTime.UtcNow.AddMonths(-6)
             },
@@ -72,7 +72,7 @@ public static class DevConnectDbContextSeeder
                     "Data scientist working on machine learning applications in healthcare. Python enthusiast.",
                 AvatarUrl = "https://randomuser.me/api/portraits/women/26.jpg",
                 Email = "priya.p@example.com",
-                ProfileSkills = MakerandomSkills(skills),
+                ProfileSkills = MakerandomSkills(skills, "tensorflow pytorch python pandas numpy"),
                 CreatedAt = DateTime.UtcNow.AddMonths(-5),
                 UpdatedAt = DateTime.UtcNow.AddMonths(-5)
             },
@@ -83,7 +83,7 @@ public static class DevConnectDbContextSeeder
                 Description = "DevOps engineer with expertise in cloud infrastructure and CI/CD pipelines.",
                 AvatarUrl = "https://randomuser.me/api/portraits/men/2.jpg",
                 Email = "david.w@example.com",
-                ProfileSkills = MakerandomSkills(skills),
+                ProfileSkills = MakerandomSkills(skills, "kubernanes, helmcharts, aws"),
                 CreatedAt = DateTime.UtcNow.AddMonths(-4),
                 UpdatedAt = DateTime.UtcNow.AddMonths(-4)
             }
@@ -333,29 +333,57 @@ public static class DevConnectDbContextSeeder
                 Email = profile.Email,
             };
             var createdUser = userManager.CreateAsync(identity, "#ZAQ12wsx!").Result;
+            if (!createdUser.Succeeded)
+            {
+                throw new ApplicationException(createdUser.Errors.First().Description);
+            }
             profile.IdentityId = identity.Id;
         }
     }
+    private static Random rand1 = new Random(5);
 
     private static ICollection<ProfileSkill> MakerandomSkills(List<Skill> skills, string? desiredSkills = null)
     {
-        string[] desiredSkillsSet = desiredSkills?.Split(',') ?? new string[0];
-        var rand1 = new Random(5);
-        var skillsCount = rand1.Next(10);
         var result = new List<ProfileSkill>();
-        for (int i = 0; i < skillsCount; i++)
+        var desiredSkillItems = desiredSkills?.Split(",").Select(skill => skill.Trim().ToLower()).ToList();
+        if (desiredSkillItems != null && desiredSkillItems.Any())
         {
-            var skillIndex = rand1.Next(skills.Count);
-            var skill = skills[skillIndex];
-            result.Add(new ProfileSkill()
+            foreach (var skill in desiredSkillItems)
             {
-                SkillId = skill.Id,
-                Skill = skill,
-                CreatedAt = DateTime.UtcNow.AddDays(-1),
-                YearsOfExperience = rand1.Next(1,6),
-            });
+                var skillObj = skills.FirstOrDefault(x=>x.Name == skill);
+                if (skillObj != null)
+                {
+                    result.Add(new ProfileSkill()
+                    {
+                        SkillId = skillObj.Id,
+                        Skill = skillObj,
+                        CreatedAt = DateTime.UtcNow.AddDays(-1),
+                        YearsOfExperience = rand1.Next(1,6),
+                    
+                    });
+                }
+            }
         }
+        else
+        {
+            var skillsCount = rand1.Next(10);
+        
+            for (int i = 0; i < skillsCount; i++)
+            {
+                var skillIndex = rand1.Next(skills.Count);
+                var skill = skills[skillIndex];
+                result.Add(new ProfileSkill()
+                {
+                    SkillId = skill.Id,
+                    Skill = skill,
+                    CreatedAt = DateTime.UtcNow.AddDays(-1),
+                    YearsOfExperience = rand1.Next(1,6),
+                });
+            }
 
+            return result;
+        }
+        
         return result;
     }
 }
