@@ -11,8 +11,13 @@ public static class DevConnectDbContextSeeder
         
         var skillTagsStr = File.ReadAllText("SkillTags.json");
         var skillTags = JsonSerializer.Deserialize<List<string>>(skillTagsStr);
-        foreach (var skillTag in skillTags)
+        var existingSkills = context.Skills.Select(x => x.Name).ToHashSet();
+        foreach (var skillTag in skillTags.Distinct())
         {
+            if (existingSkills.Contains(skillTag))
+            {
+                continue;
+            }
             context.Skills.Add(new Skill()
             {
                 Name = skillTag,
@@ -88,6 +93,9 @@ public static class DevConnectDbContextSeeder
                 UpdatedAt = DateTime.UtcNow.AddMonths(-4)
             }
         };
+        
+        var existingProfiles = context.Profiles.Select(x=>x.Username).ToHashSet();
+        profiles = profiles.Where(x=>!existingProfiles.Contains(x.Username)).ToList();
 
         AddIdentityForProfiles(profiles, userManager);
 
@@ -332,11 +340,20 @@ public static class DevConnectDbContextSeeder
                 UserName = profile.Username,
                 Email = profile.Email,
             };
-            var createdUser = userManager.CreateAsync(identity, "#ZAQ12wsx!").Result;
-            if (!createdUser.Succeeded)
+            var existingIdentity = userManager.FindByEmailAsync(profile.Email).Result;
+            if (existingIdentity == null)
             {
-                throw new ApplicationException(createdUser.Errors.First().Description);
+                var createdUser = userManager.CreateAsync(identity, "#ZAQ12wsx!").Result;
+                if (!createdUser.Succeeded)
+                {
+                    throw new ApplicationException(createdUser.Errors.First().Description);
+                }
             }
+            else
+            {
+                identity.Id = existingIdentity.Id;
+            }
+            
             profile.IdentityId = identity.Id;
         }
     }

@@ -51,7 +51,7 @@ public class Profile
         }
     }
 
-    public string City { get; set; }
+    public string? City { get; set; }
     
     public string IdentityId { get; set; }
 }
@@ -67,11 +67,11 @@ public class Skill
     public string Name { get; set; }
         
     [StringLength(500)]
-    public string Description { get; set; }
+    public string? Description { get; set; }
         
     // Optional category field for filtering/grouping
     [StringLength(50)]
-    public string Category { get; set; }
+    public string? Category { get; set; }
         
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
@@ -118,7 +118,7 @@ public class Post
 
     [Required] [StringLength(255)] public string Title { get; set; }
 
-    [Required] public string Content { get; set; }
+    public string? Content { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

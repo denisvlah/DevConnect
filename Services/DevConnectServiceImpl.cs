@@ -1,4 +1,6 @@
+using System.Transactions;
 using DevConnect.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevConnect.Services;
@@ -6,10 +8,12 @@ namespace DevConnect.Services;
 public class DevConnectServiceImpl: IDevConnectService
 {
     private readonly DevConnectDbContext _devConnectContext;
+    private readonly UserManager<User> _userManager;
 
-    public DevConnectServiceImpl(DevConnectDbContext devConnectContext)
+    public DevConnectServiceImpl(DevConnectDbContext devConnectContext, UserManager<User> userManager)
     {
         _devConnectContext = devConnectContext;
+        _userManager = userManager;
     }
     
     public Task<Token> Login_for_access_token_auth_token_postAsync(Body_login_for_access_token_auth_token_post body,
@@ -58,9 +62,23 @@ public class DevConnectServiceImpl: IDevConnectService
         };
     }
 
-    public Task Delete_me_account_me_deleteAsync(string? identityName, CancellationToken cancellationToken = default)
+    public async Task Delete_me_account_me_deleteAsync(string? identityName, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var profile = await _devConnectContext.Profiles.FirstOrDefaultAsync(x=>x.Username == identityName, cancellationToken: cancellationToken);
+        if (profile == null)
+        {
+            return;
+        }
+        var user = await _userManager.FindByNameAsync(profile.Username);
+        if (user == null)
+        {
+            return;
+        }
+
+        using var tr = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        _devConnectContext.Profiles.Remove(profile);
+        await _userManager.DeleteAsync(user);
+        await _devConnectContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<UserReadSchema> Update_me_account_me_patchAsync(string? identityName, UserUpdateSchema body,
