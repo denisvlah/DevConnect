@@ -367,8 +367,10 @@ public class EndpointsController : Controller
     /// <returns>Successful Response</returns>
     [HttpPost]
     [Route("post/upload_image/{post_id}")]
-    public Task<Application__post__schemas__PostReadSchema> Load_image_post_upload_image__post_id__post(int post_id,
-        FileParameter image, CancellationToken cancellationToken)
+    public Task<Application__post__schemas__PostReadSchema> Load_image_post_upload_image__post_id__post(
+        int post_id,
+        [FromForm] FileParameter image, 
+        CancellationToken cancellationToken)
     {
         return _implementation.Load_image_post_upload_image__post_id__postAsync(HttpContext.User.Identity?.Name, post_id, image, cancellationToken);
     }
@@ -407,4 +409,9 @@ public class EndpointsController : Controller
     {
         return _implementation.Delete_like_post_like__post_id__deleteAsync(HttpContext.User.Identity?.Name, post_id, cancellationToken);
     }
+}
+
+public class FileParameter
+{
+    public IFormFile Image { get; set; }
 }

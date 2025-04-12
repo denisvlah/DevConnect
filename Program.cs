@@ -28,6 +28,8 @@ builder.Services.AddIdentityApiEndpoints<User>()
     .AddEntityFrameworkStores<AspIdentityContext>()
     .AddApiEndpoints();
 
+builder.Services.AddHttpContextAccessor();
+
 // Add OpenAPI services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
