@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevConnect.Services;
 
-public class DevConnectServiceImpl: IDevConnectService
+public class DevConnectServiceImpl : IDevConnectService
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly SignInManager<IdentityUser> _signInManager;
@@ -29,7 +29,7 @@ public class DevConnectServiceImpl: IDevConnectService
         DevConnectDbContext context,
         AspIdentityContext identityContext,
         IHttpContextAccessor httpContextAccessor
-        )
+    )
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -37,7 +37,7 @@ public class DevConnectServiceImpl: IDevConnectService
         _identityContext = identityContext;
         _httpContextAccessor = httpContextAccessor;
     }
-    
+
     public async Task<Token> Login_for_access_token_auth_token_postAsync(
         Body_login_for_access_token_auth_token_post model,
         CancellationToken cancellationToken = default)
@@ -50,16 +50,16 @@ public class DevConnectServiceImpl: IDevConnectService
         }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
-            
+
         if (!result.Succeeded)
         {
-            throw new UnauthorizedAccessException( "Invalid username or password" );
+            throw new UnauthorizedAccessException("Invalid username or password");
         }
 
         // Generate tokens using ASP.NET Identity token providers
         var accessToken = await _userManager.GenerateUserTokenAsync(user, AccessTokenProvider, AccessTokenPurpose);
         var refreshToken = await _userManager.GenerateUserTokenAsync(user, RefreshTokenProvider, RefreshTokenPurpose);
-        var userEntity = await _identityContext.Users.FirstAsync(x=>x.Id == user.Id, cancellationToken);
+        var userEntity = await _identityContext.Users.FirstAsync(x => x.Id == user.Id, cancellationToken);
         userEntity.RefreshToken = refreshToken;
         await _devConnectContext.SaveChangesAsync(cancellationToken);
 
@@ -71,9 +71,12 @@ public class DevConnectServiceImpl: IDevConnectService
         };
     }
 
-    public async Task<Token> Refresh_token_auth_refresh_postAsync(RefreshToken model, CancellationToken cancellationToken = default)
+    public async Task<Token> Refresh_token_auth_refresh_postAsync(RefreshToken model,
+        CancellationToken cancellationToken = default)
     {
-        var userEntity = await _identityContext.Users.FirstOrDefaultAsync(x=>x.RefreshToken == model.Refresh_token, cancellationToken);
+        var userEntity =
+            await _identityContext.Users.FirstOrDefaultAsync(x => x.RefreshToken == model.Refresh_token,
+                cancellationToken);
         if (userEntity == null)
         {
             throw new UnauthorizedAccessException();
@@ -86,17 +89,20 @@ public class DevConnectServiceImpl: IDevConnectService
         }
 
         // Validate the refresh token
-        var isValid = await _userManager.VerifyUserTokenAsync(user, RefreshTokenProvider, RefreshTokenPurpose, model.Refresh_token);
+        var isValid =
+            await _userManager.VerifyUserTokenAsync(user, RefreshTokenProvider, RefreshTokenPurpose,
+                model.Refresh_token);
         if (!isValid)
         {
             throw new UnauthorizedAccessException();
         }
-        
+
         await _userManager.RemoveAuthenticationTokenAsync(user, RefreshTokenProvider, RefreshTokenPurpose);
         // Generate new tokens
         var newAccessToken = await _userManager.GenerateUserTokenAsync(user, AccessTokenProvider, AccessTokenPurpose);
-        var newRefreshToken = await _userManager.GenerateUserTokenAsync(user, RefreshTokenProvider, RefreshTokenPurpose);
-        
+        var newRefreshToken =
+            await _userManager.GenerateUserTokenAsync(user, RefreshTokenProvider, RefreshTokenPurpose);
+
         await _userManager.UpdateAsync(user);
         userEntity.RefreshToken = newRefreshToken;
         await _devConnectContext.SaveChangesAsync(cancellationToken);
@@ -118,30 +124,35 @@ public class DevConnectServiceImpl: IDevConnectService
 
         var userIdentity = await _userManager.GetUserAsync(user);
         await _userManager.UpdateAsync(userIdentity);
-        
+
         await _userManager.RemoveAuthenticationTokenAsync(userIdentity, RefreshTokenProvider, RefreshTokenPurpose);
         return null;
     }
 
-    public Task<List<UserReadSchemaShort>> Get_test_accounts_account_test_accounts_getAsync(CancellationToken cancellationToken = default)
+    public Task<List<UserReadSchemaShort>> Get_test_accounts_account_test_accounts_getAsync(
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new List<UserReadSchemaShort>());
     }
 
-    public async Task<UserReadSchema> Get_me_account_me_getAsync(string? identityName, CancellationToken cancellationToken = default)
+    public async Task<UserReadSchema> Get_me_account_me_getAsync(string identityName,
+        CancellationToken cancellationToken = default)
     {
-        
-        var currentProfile = await _devConnectContext.Profiles.FirstOrDefaultAsync(x=>x.Username == identityName, cancellationToken: cancellationToken);
+
+        var currentProfile = await FindProfileByUsernameAsync(identityName, cancellationToken);
         if (currentProfile == null)
         {
             throw new EntityNotFoundException();
         }
+
         return await MapUserReadSchema(cancellationToken, currentProfile);
     }
 
     private async Task<UserReadSchema> MapUserReadSchema(CancellationToken cancellationToken, Profile currentProfile)
     {
-        var subscribersAmount = await _devConnectContext.Subscriptions.CountAsync(x=>x.FollowingId == currentProfile.Id, cancellationToken);
+        var subscribersAmount =
+            await _devConnectContext.Subscriptions.CountAsync(x => x.FollowingId == currentProfile.Id,
+                cancellationToken);
 
         return new UserReadSchema()
         {
@@ -149,7 +160,7 @@ public class DevConnectServiceImpl: IDevConnectService
             City = currentProfile.City,
             Description = currentProfile.Description,
             Id = currentProfile.Id,
-            //Stack = currentProfile.Skills,//TODO
+            Stack = currentProfile.ProfileSkills.Select(x => x.Skill.Name).ToList(),
             AvatarUrl = currentProfile.AvatarUrl,
             FirstName = currentProfile.FirstName,
             LastName = currentProfile.LastName,
@@ -158,13 +169,16 @@ public class DevConnectServiceImpl: IDevConnectService
         };
     }
 
-    public async Task Delete_me_account_me_deleteAsync(string? identityName, CancellationToken cancellationToken = default)
+    public async Task Delete_me_account_me_deleteAsync(string? identityName,
+        CancellationToken cancellationToken = default)
     {
-        var profile = await _devConnectContext.Profiles.FirstOrDefaultAsync(x=>x.Username == identityName, cancellationToken: cancellationToken);
+        var profile = await _devConnectContext.Profiles.FirstOrDefaultAsync(x => x.Username == identityName,
+            cancellationToken: cancellationToken);
         if (profile == null)
         {
             return;
         }
+
         var user = await _userManager.FindByNameAsync(profile.Username);
         if (user == null)
         {
@@ -185,6 +199,7 @@ public class DevConnectServiceImpl: IDevConnectService
         {
             throw new EntityNotFoundException();
         }
+
         profile.City = body.City;
         profile.FirstName = body.FirstName;
         profile.LastName = body.LastName;
@@ -192,7 +207,8 @@ public class DevConnectServiceImpl: IDevConnectService
         profile.UpdatedAt = DateTime.UtcNow;
         _devConnectContext.Profiles.Update(profile);
         await _devConnectContext.SaveChangesAsync(cancellationToken);
-        var subscribersAmount = await _devConnectContext.Subscriptions.CountAsync(x=>x.FollowingId == profile.Id, cancellationToken);
+        var subscribersAmount =
+            await _devConnectContext.Subscriptions.CountAsync(x => x.FollowingId == profile.Id, cancellationToken);
         return new UserReadSchema()
         {
             Username = profile.Username,
@@ -212,32 +228,44 @@ public class DevConnectServiceImpl: IDevConnectService
         string? identityName, FileParameter image,
         CancellationToken cancellationToken = default)
     {
-        var user = _devConnectContext.Profiles.FirstOrDefault(x => x.Username == identityName);
+        var user = await FindProfileByUsernameAsync(identityName, cancellationToken);
+
+        var uniqPath = $"{Guid.NewGuid().ToString()}.{image.Image.ContentType}";
+        user.AvatarUrl = uniqPath;
+        await _devConnectContext.SaveChangesAsync(cancellationToken);
+
+        return await MapUserReadSchema(cancellationToken, user);
+    }
+
+    private async Task<Profile> FindProfileByUsernameAsync(string? identityName, CancellationToken ct = default)
+    {
+        var user = await _devConnectContext
+            .Profiles
+            .Include(x=>x.ProfileSkills.Select(x=>x.Skill.Name))
+            .FirstOrDefaultAsync(x => x.Username == identityName, ct);
+
         if (user == null)
         {
             throw new EntityNotFoundException();
         }
 
-        var uniqPath = $"{Guid.NewGuid().ToString()}.{image.Image.ContentType}";
-        user.AvatarUrl = uniqPath;
-        await _devConnectContext.SaveChangesAsync(cancellationToken);
-        
-        return await MapUserReadSchema(cancellationToken, user);
-
+        return user;
     }
 
-    public async Task<UserReadSchema> Delete_my_image_account_delete_image_deleteAsync(string? identityName,
-        CancellationToken cancellationToken = default)
+
+    public async Task<UserReadSchema> Delete_my_image_account_delete_image_deleteAsync(
+        string identityName,
+        CancellationToken ct = default)
     {
-        var user = _devConnectContext.Profiles.FirstOrDefault(x => x.Username == identityName);
+        var user = await FindProfileByUsernameAsync(identityName, ct);
         if (!string.IsNullOrWhiteSpace(user.AvatarUrl))
         {
             var path = user.AvatarUrl;
             user.AvatarUrl = "";
-            await _devConnectContext.SaveChangesAsync(cancellationToken);
-            await _fileStorage.DeleteFileAsync(path, cancellationToken);
+            await _devConnectContext.SaveChangesAsync(ct);
+            await _fileStorage.DeleteFileAsync(path, ct);
         }
-        return await MapUserReadSchema(cancellationToken, user);
+        return await MapUserReadSchema(ct, user);
     }
 
     public async Task<Page_UserReadSchemaShort_> Get_accounts_account_accounts_getAsync(
@@ -252,6 +280,20 @@ public class DevConnectServiceImpl: IDevConnectService
     {
         var q = _devConnectContext.Profiles
             .AsQueryable();
+
+        return await MakeSearch(q, stack, firstName, lastName, city, page, size, cancellationToken);
+    }
+
+    private static async Task<Page_UserReadSchemaShort_> MakeSearch(
+        IQueryable<Profile> q,
+        string? stack,
+        string? firstName, 
+        string? lastName, 
+        string? city, 
+        int page=0, 
+        int size=50,
+        CancellationToken cancellationToken=default )
+    {
         if (!string.IsNullOrWhiteSpace(firstName))
         {
             q = q.Where(x=>x.FirstName.StartsWith(firstName));
@@ -294,11 +336,9 @@ public class DevConnectServiceImpl: IDevConnectService
         
         var countT = q.CountAsync(cancellationToken);
         var itemsT = q
-            .Include(x=>x.Id)
             .OrderBy(x => x.Id)
             .Take(size)
             .Skip(page * size)
-            .AsNoTracking()
             .Select(x=>new UserReadSchemaShort()
             {
                 Id = x.Id,
@@ -326,7 +366,6 @@ public class DevConnectServiceImpl: IDevConnectService
             Items = items,
             Pages = pages
         };
-        
     }
 
     public async Task<object> Get_account_account__account_id__getAsync(
@@ -389,66 +428,122 @@ public class DevConnectServiceImpl: IDevConnectService
         return new object();
     }
 
-    public Task<Page_UserReadSchemaShort_> Get_subscriptions_account_subscriptions__getAsync(string? identityName, string stack, string firstName,
-        string lastName, string city, string orderBy, int page, int size, CancellationToken cancellationToken = default)
+    public async Task<Page_UserReadSchemaShort_> Get_subscriptions_account_subscriptions__getAsync(
+        string identityName,
+        string? stack,
+        string? firstName,
+        string? lastName, string? city, string? orderBy, int page, int size, CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var profileId = await _devConnectContext.Profiles.Where(x => x.Username == identityName)
+            .Select(x => x.Id)
+            .FirstAsync(ct);
+
+        var profiles = _devConnectContext
+            .Profiles
+            .Where(x => x.Following.Any(y => y.FollowingId == profileId));
+        
+        return await MakeSearch(profiles, stack, firstName, null, city, page, size, ct);
     }
 
-    public Task<Page_UserReadSchemaShort_> Get_subscribers_account_subscribers__getAsync(string? identityName, string stack, string firstLastName,
-        string city, string orderBy, int page, int size, CancellationToken cancellationToken = default)
+    public async Task<Page_UserReadSchemaShort_> Get_subscribers_account_subscribers__getAsync(string? identityName, string stack, string firstLastName,
+        string city, string orderBy, int page, int size, CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var profileId = await _devConnectContext.Profiles.Where(x => x.Username == identityName)
+            .Select(x => x.Id)
+            .FirstAsync(ct);
+
+        var profiles = _devConnectContext
+            .Profiles
+            .Where(x => x.Following.Any(y => y.FollowerId == profileId));
+        
+        return await MakeSearch(profiles, stack, firstLastName, null, city, page, size, ct);
     }
 
     public Task<PersonalChatReadSchema> Create_personal_chat_chat__user_id__postAsync(string? userId, int user_id,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public Task<PersonalChatReadSchema> Read_personal_chat_chat__chat_id__getAsync(string? chatId, int chat_id,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public Task<List<PersonalChatReadShortSchema>> Get_chats_chat_get_my_chats__getAsync(string? identityName, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public Task<MessageReadSchema> Send_message_message_send__chat_id__postAsync(string? chatId, int chat_id, string message,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public Task<MessageReadSchema> Get_my_message_message__message_id__getAsync(string? messageId, int message_id,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public Task<MessageReadSchema> Patch_my_message_message__message_id__patchAsync(string? messageId, int message_id, string text,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     public Task Delete_my_message_message__message_id__deleteAsync(string? messageId, int message_id,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return null;
     }
 
-    public Task<CommentReadSchema> Create_comment_comment__postAsync(string? identityName, CommentCreateSchema body,
-        CancellationToken cancellationToken = default)
+    public async Task<CommentReadSchema> Create_comment_comment__postAsync(
+        string identityName, 
+        CommentCreateSchema body,
+        CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var profile = await FindProfileByUsernameAsync(identityName, ct);
+        var profileId = profile.Id;
+        var e = _devConnectContext.Comments.Add(new Comment()
+        {
+            ProfileId = profileId,
+            CreatedAt = DateTime.UtcNow,
+            Content = body.Text,
+            UpdatedAt = DateTime.UtcNow,
+            PostId = body.PostId,
+            
+
+        });
+        await _devConnectContext.SaveChangesAsync(ct);
+        
+        var userReadSchema = await MapUserReadSchema(ct, profile);
+        
+        return new CommentReadSchema()
+        {
+            Id = e.Entity.Id,
+            CreatedAt = e.Entity.CreatedAt,
+            PostId = e.Entity.PostId,
+            Text = e.Entity.Content,
+            UpdatedAt = e.Entity.UpdatedAt,
+            CommentId = e.Entity.Id,
+            Author = new UserReadSmallSchema()
+            {
+                Username = identityName,
+                AvatarUrl = userReadSchema.AvatarUrl,
+                SubscribersAmount = userReadSchema.SubscribersAmount,
+                Id = userReadSchema.Id,
+                AdditionalProperties = new Dictionary<string, object>(),
+                
+            }
+
+        };
     }
 
-    public Task<CommentReadWithChildSchema> Get_comment_comment__comment_id__getAsync(string? commentId, int comment_id,
+    public Task<CommentReadWithChildSchema> Get_comment_comment__comment_id__getAsync(
+        string? commentId, int comment_id,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
