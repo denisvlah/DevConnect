@@ -28,7 +28,8 @@ public class DevConnectServiceImpl : IDevConnectService
         SignInManager<IdentityUser> signInManager,
         DevConnectDbContext context,
         AspIdentityContext identityContext,
-        IHttpContextAccessor httpContextAccessor
+        IHttpContextAccessor httpContextAccessor,
+        IFileStorage fileStorage
     )
     {
         _userManager = userManager;
@@ -36,6 +37,7 @@ public class DevConnectServiceImpl : IDevConnectService
         _devConnectContext = context;
         _identityContext = identityContext;
         _httpContextAccessor = httpContextAccessor;
+        _fileStorage = fileStorage;
     }
 
     public async Task<Token> Login_for_access_token_auth_token_postAsync(
@@ -169,7 +171,7 @@ public class DevConnectServiceImpl : IDevConnectService
         };
     }
 
-    public async Task Delete_me_account_me_deleteAsync(string? identityName,
+    public async Task Delete_me_account_me_deleteAsync(string identityName,
         CancellationToken cancellationToken = default)
     {
         var profile = await _devConnectContext.Profiles.FirstOrDefaultAsync(x => x.Username == identityName,
@@ -191,7 +193,7 @@ public class DevConnectServiceImpl : IDevConnectService
         await _devConnectContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<UserReadSchema> Update_me_account_me_patchAsync(string? identityName, UserUpdateSchema body,
+    public async Task<UserReadSchema> Update_me_account_me_patchAsync(string identityName, UserUpdateSchema body,
         CancellationToken cancellationToken = default)
     {
         var profile = _devConnectContext.Profiles.FirstOrDefault(x => x.Username == identityName);
@@ -225,7 +227,7 @@ public class DevConnectServiceImpl : IDevConnectService
     }
 
     public async Task<UserReadSchema> Load_image_account_upload_image_postAsync(
-        string? identityName, FileParameter image,
+        string identityName, FileParameter image,
         CancellationToken cancellationToken = default)
     {
         var user = await FindProfileByUsernameAsync(identityName, cancellationToken);
@@ -237,11 +239,12 @@ public class DevConnectServiceImpl : IDevConnectService
         return await MapUserReadSchema(cancellationToken, user);
     }
 
-    private async Task<Profile> FindProfileByUsernameAsync(string? identityName, CancellationToken ct = default)
+    private async Task<Profile> FindProfileByUsernameAsync(string identityName, CancellationToken ct = default)
     {
         var user = await _devConnectContext
             .Profiles
-            .Include(x=>x.ProfileSkills.Select(x=>x.Skill.Name))
+            .Include(x=>x.ProfileSkills)
+            .ThenInclude(x=>x.Skill)
             .FirstOrDefaultAsync(x => x.Username == identityName, ct);
 
         if (user == null)
@@ -269,7 +272,7 @@ public class DevConnectServiceImpl : IDevConnectService
     }
 
     public async Task<Page_UserReadSchemaShort_> Get_accounts_account_accounts_getAsync(
-        string? identityName, 
+        string identityName, 
         string stack, 
         string firstName, 
         string lastName,
@@ -368,15 +371,14 @@ public class DevConnectServiceImpl : IDevConnectService
         };
     }
 
-    public async Task<object> Get_account_account__account_id__getAsync(
-        string? accountId, int account_id,
+    public async Task<object> Get_account_account__account_id__getAsync(string? identityName, int account_id,
         CancellationToken cancellationToken = default)
     {
         var result = await _devConnectContext.Profiles.FirstOrDefaultAsync(x=>x.Id == account_id, cancellationToken: cancellationToken);
         return result;
     }
 
-    public async Task<object> Subscribe_account_subscribe__account_id__postAsync(string? accountId, int account_id,
+    public async Task<object> Subscribe_account_subscribe__account_id__postAsync(string? identityName, int account_id,
         CancellationToken cancellationToken = default)
     {
         var profileData = await _devConnectContext.Profiles.FirstOrDefaultAsync(x=>x.Id == account_id, cancellationToken);
@@ -404,7 +406,7 @@ public class DevConnectServiceImpl : IDevConnectService
         return new object();
     }
 
-    public async Task<object> Unsubscribe_account_subscribe__account_id__deleteAsync(string? accountId, int account_id,
+    public async Task<object> Unsubscribe_account_subscribe__account_id__deleteAsync(string? identityName, int account_id,
         CancellationToken cancellationToken = default)
     {
         var profileData = await _devConnectContext.Profiles
@@ -445,7 +447,7 @@ public class DevConnectServiceImpl : IDevConnectService
         return await MakeSearch(profiles, stack, firstName, null, city, page, size, ct);
     }
 
-    public async Task<Page_UserReadSchemaShort_> Get_subscribers_account_subscribers__getAsync(string? identityName, string stack, string firstLastName,
+    public async Task<Page_UserReadSchemaShort_> Get_subscribers_account_subscribers__getAsync(string identityName, string stack, string firstLastName,
         string city, string orderBy, int page, int size, CancellationToken ct = default)
     {
         var profileId = await _devConnectContext.Profiles.Where(x => x.Username == identityName)
@@ -471,7 +473,7 @@ public class DevConnectServiceImpl : IDevConnectService
         return null;
     }
 
-    public Task<List<PersonalChatReadShortSchema>> Get_chats_chat_get_my_chats__getAsync(string? identityName, CancellationToken cancellationToken = default)
+    public Task<List<PersonalChatReadShortSchema>> Get_chats_chat_get_my_chats__getAsync(string identityName, CancellationToken cancellationToken = default)
     {
         return null;
     }
@@ -542,65 +544,250 @@ public class DevConnectServiceImpl : IDevConnectService
         };
     }
 
-    public Task<CommentReadWithChildSchema> Get_comment_comment__comment_id__getAsync(
-        string? commentId, int comment_id,
+    public async Task<CommentReadWithChildSchema> Get_comment_comment__comment_id__getAsync(string? commentId,
+        int comment_id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _devConnectContext.Comments.FindAsync(comment_id, cancellationToken, cancellationToken);
+        if (result == null)
+        {
+            throw new EntityNotFoundException();
+        }
+
+        return new CommentReadWithChildSchema()
+        {
+            Id = result.Id,
+            CreatedAt = result.CreatedAt,
+            Author = new UserReadSmallSchema()
+            {
+                Username = result.Author.Username,
+                AvatarUrl = result.Author.AvatarUrl,
+                Id = result.Author.Id,
+                SubscribersAmount = 0
+            }
+        };
+    }
+
+    public async Task<object> Update_comment_comment__comment_id__patchAsync(string? commentId, int comment_id,
+        CommentUpdateSchema body,
+        CancellationToken cancellationToken = default)
+    {
+        var comment = await _devConnectContext.Comments
+            .Include(x=>x.Author)
+            .FirstOrDefaultAsync(x=>x.Id == comment_id, cancellationToken);
+        
+        if (comment == null)
+        {
+            throw new EntityNotFoundException();
+        }
+
+        var currentIdentity = _httpContextAccessor.HttpContext.User.Identity?.Name;
+
+        if (comment.Author.IdentityId != currentIdentity)
+        {
+            throw new UnauthorizedAccessException();
+        }
+        
+        comment.UpdatedAt = DateTime.UtcNow;
+        comment.Content = body.Text;
+
+        return new object();
+
+    }
+
+    public async Task Delete_comment_comment__comment_id__deleteAsync(string? commentId, int comment_id,
+        CancellationToken cancellationToken = default)
+    {
+        var comment =  await _devConnectContext.Comments.Include(x=>x.Author).FirstOrDefaultAsync(x=>x.Id == comment_id, cancellationToken);
+        if (comment == null)
+        {
+            throw new EntityNotFoundException();
+        }
+        var currentIdentity = _httpContextAccessor.HttpContext.User.Identity?.Name;
+        if (comment.Author.IdentityId != currentIdentity)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        _devConnectContext.Comments.Remove(comment);
+        await _devConnectContext.SaveChangesAsync(cancellationToken);
+
+
+    }
+
+    public async Task<List<Application__post__schemas__PostReadSchema>> Get_posts_post__getAsync(string? userId, int? user_id, CancellationToken cancellationToken = default)
+    {
+        var posts = await _devConnectContext.Posts
+            .Include(x=>x.Author)
+            .Include(x=>x.Comments)
+            .ThenInclude(x=>x.Author)
+            .Include(x=>x.Likes)
+            .Include(x=>x.Author.ProfileSkills)
+            .ThenInclude(x=>x.Skill)
+            .Where(x => x.Author.Id == user_id).ToListAsync(cancellationToken);
+
+        return posts.Select(x => new Application__post__schemas__PostReadSchema()
+        {
+            Id = x.Id,
+            Author = new UserReadSchemaShort()
+            {
+                Id = x.Author.Id,
+                Username = x.Author.Username,
+                AvatarUrl = x.Author.AvatarUrl,
+                Description = x.Author.Description,
+                City = x.Author.City,
+                FirstName = x.Author.FirstName,
+                IsActive = true,
+                LastName = x.Author.LastName,
+                Stack = x.Author.ProfileSkills.Select(x=>x.Skill.Name).ToList(),
+            },
+            Images = new List<string>(),
+            Comments = x.Comments.Select(c=>new CommentReadWithChildSchema()
+            {
+                Id = c.Id,
+                Author = new UserReadSmallSchema()
+                {
+                    Username = c.Author.Username,
+                    AvatarUrl = c.Author.AvatarUrl,
+                    Id = c.Author.Id,
+                },
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt,
+                PostId = c.PostId,
+                CommentId = c.Id,
+                Text = c.Content,
+                Comments = null // not needed at this time
+                
+            }).ToList()
+
+        }).ToList();
+
+    }
+
+    public async Task<Application__post__schemas__PostReadSchema> Create_post_post__postAsync(
+        string identityName, 
+        PostCreateSchema body,
+        CancellationToken cancellationToken = default)
+    {
+        var author = await FindProfileByUsernameAsync(identityName, cancellationToken);
+        var post = new Post()
+        {
+            CreatedAt = DateTime.UtcNow,
+            ProfileId = author.Id,
+            UpdatedAt = DateTime.UtcNow,
+            Content = body.Content,
+            Title = body.Title,
+
+        };
+        await _devConnectContext.Posts.AddAsync(post, cancellationToken);
+        await _devConnectContext.SaveChangesAsync(cancellationToken);
+
+        return new Application__post__schemas__PostReadSchema()
+        {
+            CreatedAt = post.CreatedAt,
+            Comments = new List<CommentReadWithChildSchema>(),
+            Id = post.Id,
+            Content = post.Content,
+            Title = post.Title,
+            Images = new List<string>(),
+            UpdatedAt = post.UpdatedAt,
+            Author = new UserReadSchemaShort()
+            {
+                Id = author.Id,
+                Username = author.Username,
+                AvatarUrl = author.AvatarUrl,
+                City = author.City,
+                Description = author.Description,
+                FirstName = author.FirstName,
+                LastName = author.LastName,
+                IsActive = true,
+                Stack = author.ProfileSkills.Select(x => x.Skill.Name).ToList(),
+            },
+            Likes = new(),
+            CommunityId = 0,
+
+        };
+
+    }
+
+    public async Task<List<Application__post__schemas__PostReadSchema>> Get_my_subscriptions_post_post_my_subscriptions_getAsync(string identityName,
+        CancellationToken cancellationToken = default)
+    {
+        var myIdentity = _httpContextAccessor.HttpContext.User.Identity?.Name;
+        
+        var mysubscriptions = await _devConnectContext.Subscriptions
+            .Where(x=>x.Following.IdentityId == myIdentity)
+            .Select(x=>x.FollowerId)
+            .ToListAsync(cancellationToken);
+        
+        var posts = await _devConnectContext.Posts
+            .Include(x=>x.Author)
+            .ThenInclude(x=>x.ProfileSkills)
+            .ThenInclude(x=>x.Skill)
+            .Include(x=>x.Likes)
+            .Include(x=>x.Comments)
+            .ThenInclude(x=>x.Author)
+            .Where(x=> mysubscriptions.Contains(x.Author.Id)).ToListAsync(cancellationToken);
+        
+        return posts.Select(x=> new Application__post__schemas__PostReadSchema
+        {
+            Id = x.Id,
+            CreatedAt = x.CreatedAt,
+            UpdatedAt = x.UpdatedAt,
+            Title = x.Title,
+            Likes = x.Likes.Count,
+            Content = x.Content,
+            Comments = x.Comments.Select(c=> new CommentReadWithChildSchema
+            {
+                Id = c.Id,
+                CreatedAt =c.CreatedAt,
+                UpdatedAt = c.UpdatedAt,
+                Text = c.Content,
+                CommentId = c.Id,
+                PostId = x.Id,
+                Comments = new(),
+                Author = new UserReadSmallSchema()
+                {
+                    Username = c.Author.Username,
+                    Id = c.Author.Id,
+                    AvatarUrl = c.Author.AvatarUrl,
+                    
+                },
+                
+            }).ToList()
+            
+        }).ToList();
+        
+    }
+
+    public Task<Application__post__schemas__PostReadSchema> Get_post_post__post_id__getAsync(string? postId,
+        int post_id, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<Application__post__schemas__PostReadSchema> Update_post_post__post_id__patchAsync(string? postId,
+        int post_id, PostUpdateSchema body,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<object> Update_comment_comment__comment_id__patchAsync(string? commentId, int comment_id, CommentUpdateSchema body,
+    public Task Delete_post_post__post_id__deleteAsync(string? postId, int post_id,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task Delete_comment_comment__comment_id__deleteAsync(string? commentId, int comment_id,
+    public Task<Application__post__schemas__PostReadSchema> Load_image_post_upload_image__post_id__postAsync(
+        string? postId, int post_id, FileParameter image,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<List<Application__post__schemas__PostReadSchema>> Get_posts_post__getAsync(string? userId, int? user_id, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Application__post__schemas__PostReadSchema> Create_post_post__postAsync(string? identityName, PostCreateSchema body,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<List<Application__post__schemas__PostReadSchema>> Get_my_subscriptions_post_post_my_subscriptions_getAsync(string? identityName,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Application__post__schemas__PostReadSchema> Get_post_post__post_id__getAsync(string? postId, int post_id, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Application__post__schemas__PostReadSchema> Update_post_post__post_id__patchAsync(string? postId, int post_id, PostUpdateSchema body,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task Delete_post_post__post_id__deleteAsync(string? postId, int post_id, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Application__post__schemas__PostReadSchema> Load_image_post_upload_image__post_id__postAsync(string? postId, int post_id, FileParameter image,
-        CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Application__post__schemas__PostReadSchema> Delete_image_post_delete_image__post_id__deleteAsync(string? postId, int post_id, string image_url,
+    public Task<Application__post__schemas__PostReadSchema> Delete_image_post_delete_image__post_id__deleteAsync(
+        string? postId, int post_id, string image_url,
         CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();

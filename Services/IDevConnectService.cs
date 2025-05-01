@@ -36,33 +36,33 @@ public interface IDevConnectService
     ///     Get Me
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<UserReadSchema> Get_me_account_me_getAsync(string? identityName, CancellationToken cancellationToken = default);
+    Task<UserReadSchema> Get_me_account_me_getAsync(string identityName, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Delete Me
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task Delete_me_account_me_deleteAsync(string? identityName, CancellationToken cancellationToken = default);
+    Task Delete_me_account_me_deleteAsync(string identityName, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Update Me
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<UserReadSchema> Update_me_account_me_patchAsync(string? identityName, UserUpdateSchema body,
+    Task<UserReadSchema> Update_me_account_me_patchAsync(string identityName, UserUpdateSchema body,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Load Image
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<UserReadSchema> Load_image_account_upload_image_postAsync(string? identityName, FileParameter image,
+    Task<UserReadSchema> Load_image_account_upload_image_postAsync(string identityName, FileParameter image,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Delete My Image
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<UserReadSchema> Delete_my_image_account_delete_image_deleteAsync(string? identityName,
+    Task<UserReadSchema> Delete_my_image_account_delete_image_deleteAsync(string identityName,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -78,7 +78,7 @@ public interface IDevConnectService
     /// <param name="size">Page size</param>
     /// <param name="cancellationToken"></param>
     /// <returns>Successful Response</returns>
-    Task<Page_UserReadSchemaShort_> Get_accounts_account_accounts_getAsync(string? identityName, string stack,
+    Task<Page_UserReadSchemaShort_> Get_accounts_account_accounts_getAsync(string identityName, string stack,
         string firstName,
         string lastName, string city, string orderBy, int page, int size,
         CancellationToken cancellationToken = default);
@@ -117,7 +117,7 @@ public interface IDevConnectService
     /// <param name="size">Page size</param>
     /// <param name="cancellationToken"></param>
     /// <returns>Successful Response</returns>
-    Task<Page_UserReadSchemaShort_> Get_subscriptions_account_subscriptions__getAsync(string? identityName,
+    Task<Page_UserReadSchemaShort_> Get_subscriptions_account_subscriptions__getAsync(string identityName,
         string stack, string firstName,
         string lastName, string city, string orderBy, int page, int size,
         CancellationToken cancellationToken = default);
@@ -134,7 +134,7 @@ public interface IDevConnectService
     /// <param name="size">Page size</param>
     /// <param name="cancellationToken"></param>
     /// <returns>Successful Response</returns>
-    Task<Page_UserReadSchemaShort_> Get_subscribers_account_subscribers__getAsync(string? identityName, string stack,
+    Task<Page_UserReadSchemaShort_> Get_subscribers_account_subscribers__getAsync(string identityName, string stack,
         string firstLastName,
         string city, string orderBy, int page, int size, CancellationToken cancellationToken = default);
 
@@ -156,7 +156,7 @@ public interface IDevConnectService
     ///     Get Chats
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<List<PersonalChatReadShortSchema>> Get_chats_chat_get_my_chats__getAsync(string? identityName,
+    Task<List<PersonalChatReadShortSchema>> Get_chats_chat_get_my_chats__getAsync(string identityName,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -192,7 +192,7 @@ public interface IDevConnectService
     ///     Create Comment
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<CommentReadSchema> Create_comment_comment__postAsync(string? identityName, CommentCreateSchema body,
+    Task<CommentReadSchema> Create_comment_comment__postAsync(string identityName, CommentCreateSchema body,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -228,7 +228,7 @@ public interface IDevConnectService
     ///     Create Post
     /// </summary>
     /// <returns>Successful Response</returns>
-    Task<Application__post__schemas__PostReadSchema> Create_post_post__postAsync(string? identityName,
+    Task<Application__post__schemas__PostReadSchema> Create_post_post__postAsync(string identityName,
         PostCreateSchema body,
         CancellationToken cancellationToken = default);
 
@@ -237,7 +237,7 @@ public interface IDevConnectService
     /// </summary>
     /// <returns>Successful Response</returns>
     Task<List<Application__post__schemas__PostReadSchema>> Get_my_subscriptions_post_post_my_subscriptions_getAsync(
-        string? identityName, CancellationToken cancellationToken = default);
+        string identityName, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Get Post
